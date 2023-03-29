@@ -5,6 +5,12 @@
     This script allows you to update (or download) ungoogled-chromium on your Windows systems. This downloads binaries from official GitHub source and no modification is done at the supply chain.
 
     To give extra peace of mind, I developed this script in a Windows system where Administrator privilege is disabled, so this script doesn't ask the same; in addition that ungoogled-chromium is installed as normal user.
+
+    Additional Links:
+    GitHub : https://github.com/1bl4z3r/boredhub/blob/master/update-chromium.ps1
+    Blog : https://1bl4z3r.cyou/posts/update-ungoogled-chromium-v2/
+
+    Ungoogled-Chromium : https://github.com/ungoogled-software/ungoogled-chromium
 .PARAMETER silent
   Specifies if script will ignore user confirmation. If provided it will not nag you for confirming each step.
 
@@ -16,27 +22,31 @@
 .EXAMPLE
     .\update-chromium.ps1 -silent
     Runs the Script silently without asking user confirmation
+.EXAMPLE
+    .\update-chromium.ps1 -help
+    Display this Help message
+.EXAMPLE
+    help .\update-chromium.ps1 -online
+    Check out Online help
 .LINK
-    GitHub : https://github.com/1bl4z3r/boredhub/blob/master/update-chromium.ps1
-    Blog : https://1bl4z3r.cyou/posts/update-ungoogled-chromium/
-
-    Ungoogled-Chromium : https://github.com/ungoogled-software/ungoogled-chromium
+    https://1bl4z3r.cyou/posts/update-ungoogled-chromium-v2/
 .NOTES
     Author: 1BL4Z3R
     Date:   March 30, 2023 
 #>
 
-param ([switch] $silent)
+param ([switch] $silent, [switch] $help)
 
 $PWD = Get-Location
 $DIR = "$PWD\ungoogled-chromium"
 
-function user-confirm{
+if($help){Get-Help -Name $PWD\update-chromium.ps1 -full;exit}
+
+function user-confirm($WarningMessage){
     if($silent){
         return
     }else{
-        Write-Host -NoNewLine "Press any key to continue..."
-		$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        Write-Warning "$WarningMessage ?" -WarningAction Inquire
     }
 }
 
@@ -58,19 +68,16 @@ function download($ver){
 }
 
 function check-if-running{
-	$chromium = Get-Process chrome -ErrorAction SilentlyContinue
-	if ($chromium) {
-		Write-Output "Chromium is running. It will be closed"
-        user-confirm
-		$chromium.CloseMainWindow()
-		Sleep 5
-		if (!$chromium.HasExited) {
-			$chromium | Stop-Process -Force
-		}
-		Remove-Variable chromium
-	}else{
-		Write-Output "Chromium is not running. We are good to go"
-	}
+    if (Get-Process -Name Chrome -ErrorAction SilentlyContinue) {
+        user-confirm "We found that Chromium is running. It will be closed. Saved whatever you are doing"
+        do {
+            $running = try{Get-Process -Name Chrome -ErrorAction Stop} catch {Write-Host "Chromium closed sucessfully" -ForegroundColor 'green'}
+            $running | ForEach-Object {$_.CloseMainWindow()|Out-Null}
+        }
+        until ($running -eq $null)
+    }else{
+        Write-Host "Chromium is not running. We are good to go" -ForegroundColor 'green'
+    }
 }
 
 function check-update($cur){
@@ -78,21 +85,21 @@ function check-update($cur){
     $str = $Response.Links.Href|Select-Object -Index 4
     $ver = $str.Substring(52,$str.length-52-2)
     if ($cur -eq 0){
-        Write-Output "Downloading latest version of ungoogled-chromium. Version: $ver"
-        #download "$ver-1"
+        Write-Host "Downloading latest version of ungoogled-chromium. Version: $ver" -ForegroundColor 'Magenta'
+        download "$ver-1"
         $child = Get-ChildItem -Path $DIR -Name
         set-shortcut "$DIR\$child\chrome.exe"
     }
     elseif ($cur -ne $ver){
-		check-if-running
+        check-if-running
         Remove-Item -LiteralPath $DIR -Force -Recurse
-        Write-Output "Current version is $cur, which is outdated, hence downloading Latest Version: $ver"
-        user-confirm
-        #download "$ver-1"
+        Write-Host "Current version is $cur, which is outdated, hence downloading Latest Version: $ver" -ForegroundColor 'red'
+        user-confirm "Do you wish to Update ungoogled-chromium to latest version"
+        download "$ver-1"
         $child = Get-ChildItem -Path $DIR -Name
         set-shortcut "$DIR\$child\chrome.exe"
     }else{
-        Write-Output "No new versions present, you are good to go"
+        Write-Host "No new versions present, you are good to go" -ForegroundColor 'green'
     }
 }
 
@@ -100,19 +107,19 @@ function check-install{
     if (Test-Path -Path $DIR){
         $child = Get-ChildItem -Path $DIR | Measure-Object
         if (($child.count -eq 0) -or ($child.count -gt 1)){
-            Write-Output "We found that ungoogled-chromium is not installed"
-            user-confirm
+            Write-Host "We found that ungoogled-chromium is not installed" -ForegroundColor 'red'
+            user-confirm "Do you wish to Install ungoogled-chromium"
             check-update 0
         }else{
-            Write-Output "We found that ungoogled-chromium is installed"
+            Write-Host "We found that ungoogled-chromium is installed" -ForegroundColor 'cyan'
             $child = Get-ChildItem -Path $DIR -Name
             $cur = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$DIR\$child\chrome.exe").ProductVersion
-            Write-Output "Current version of ungoogled-chromium is $cur"
+            Write-Host "Current version of ungoogled-chromium is $cur" -ForegroundColor 'Magenta'
             check-update $cur
         }
     }else{
-        Write-Output "We found that ungoogled-chromium is not installed"
-        user-confirm
+        Write-Host "We found that ungoogled-chromium is not installed" -ForegroundColor 'red'
+        user-confirm "Do you wish to Install ungoogled-chromium"
         check-update 0
     }
 }
