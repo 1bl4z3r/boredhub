@@ -12,8 +12,9 @@
 
     Ungoogled-Chromium : https://github.com/ungoogled-software/ungoogled-chromium
 .PARAMETER silent
-  Specifies if script will ignore user confirmation. If provided it will not nag you for confirming each step.
-
+    Specifies if script will ignore user confirmation. If provided it will not nag you for confirming each step.
+.PARAMETER help
+    Display Help message
 .INPUTS
   None. You cannot pipe objects to update-chromium.ps1.
 
@@ -32,7 +33,8 @@
     https://1bl4z3r.cyou/posts/update-ungoogled-chromium-v2/
 .NOTES
     Author: 1BL4Z3R
-    Date:   March 30, 2023 
+    Date:   March 30, 2023
+    Version: 3
 #>
 
 param ([switch] $silent, [switch] $help)
